@@ -17,12 +17,24 @@ def serialize_post(post):
     }
 
 
+# some views don't need full info about a post
 def serialize_post_short(post):
     return {
         'title': post.title,
         'author': post.author.username,
         'published_at': post.published_at,
         'slug': post.slug,
+    }
+
+
+# index view needs slightly different fields than serialize_post_short but not full info
+def serialize_post_short_index(post):
+    return {
+        'title': post.title,
+        'image_url': post.image.url if post.image else None,
+        'published_at': post.published_at,
+        'slug': post.slug,
+        'first_tag_title': post.tags.first().title,
     }
 
 
@@ -34,10 +46,7 @@ def serialize_tag(tag):
 
 
 def index(request):
-    most_popular_posts = Post.objects.popular()\
-        .prefetch_related('author')[:5]\
-        .prefetch_related(Prefetch('tags', queryset=Tag.objects.with_post_count()))\
-        .with_comment_count()
+    most_popular_posts = Post.objects.popular()[:5].prefetch_related('tags')
 
     most_fresh_posts = Post.objects.order_by('published_at')\
         .prefetch_related('author')[:5]\
@@ -48,7 +57,7 @@ def index(request):
 
     context = {
         'most_popular_posts': [
-            serialize_post(post) for post in most_popular_posts
+            serialize_post_short_index(post) for post in most_popular_posts
         ],
         'page_posts': [serialize_post(post) for post in most_fresh_posts],
         'popular_tags': [serialize_tag(tag) for tag in popular_tags],
@@ -96,10 +105,7 @@ def tag_filter(request, tag_title):
 
     popular_tags = Tag.objects.popular()[:5].with_post_count()
 
-    most_popular_posts = Post.objects.popular()\
-        .prefetch_related('author')[:5] \
-        .prefetch_related(Prefetch('tags', queryset=Tag.objects.with_post_count()))\
-        .with_comment_count()
+    most_popular_posts = Post.objects.popular().prefetch_related('author')[:5]
 
     related_posts = tag.posts.all()[:20]\
         .prefetch_related('author')\
@@ -111,7 +117,7 @@ def tag_filter(request, tag_title):
         'popular_tags': [serialize_tag(tag) for tag in popular_tags],
         'posts': [serialize_post(post) for post in related_posts],
         'most_popular_posts': [
-            serialize_post(post) for post in most_popular_posts
+            serialize_post_short(post) for post in most_popular_posts
         ],
     }
     return render(request, 'posts-list.html', context)
