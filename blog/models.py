@@ -38,9 +38,24 @@ class Post(models.Model):
         verbose_name_plural = 'посты'
 
     class PostQuerySet(models.QuerySet):
-        def year(self, year: int):
-            posts_for_year = self.filter(published_at__year=year).order_by('published_at')
-            return posts_for_year
+
+        def popular(self):
+            posts_by_like_count = self.annotate(like_count=Count('likes'))\
+                .order_by('-like_count')
+            return posts_by_like_count
+
+        # use this instead of annotate(comment_count=Count('comment')) to optimize multiple annotate calls
+        # such as when fetching both the like count and the comment count
+        def fetch_with_comment_count(self):
+            posts = self.all()
+            post_ids = [post.id for post in posts]
+            posts_with_comments = Post.objects.filter(id__in=post_ids)\
+                .annotate(comment_count=Count('comment'))
+            ids_and_comments = posts_with_comments.values_list('id', 'comment_count')
+            count_for_id = dict(ids_and_comments)
+            for post in posts:
+                post.comment_count = count_for_id[post.id]
+            return posts
 
     objects = PostQuerySet.as_manager()
 
