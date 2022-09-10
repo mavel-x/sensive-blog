@@ -78,9 +78,14 @@ class Tag(models.Model):
         verbose_name_plural = 'теги'
 
     class TagQuerySet(models.QuerySet):
+        def with_post_count(self):
+            return self.annotate(post_count=Count('posts'))
+
         def popular(self):
-            tags_by_post_count = self.annotate(num_posts=Count('posts')).order_by('-num_posts')
+            tags_by_post_count = self.with_post_count().order_by('-post_count')
             return tags_by_post_count
+
+
 
     objects = TagQuerySet.as_manager()
 
