@@ -27,17 +27,6 @@ def serialize_post_short(post):
     }
 
 
-# index view needs slightly different fields than serialize_post_short but not full info
-def serialize_post_short_index(post):
-    return {
-        'title': post.title,
-        'image_url': post.image.url if post.image else None,
-        'published_at': post.published_at,
-        'slug': post.slug,
-        'first_tag_title': post.tags.first().title,
-    }
-
-
 def serialize_tag(tag):
     return {
         'title': tag.title,
@@ -55,8 +44,19 @@ def index(request):
 
     popular_tags = Tag.objects.popular()[:5]
 
+    # index view needs slightly different fields than serialize_post_short
+    # but still not full info
+    def serialize_post_short_index(post):
+        return {
+            'title': post.title,
+            'image_url': post.image.url if post.image else None,
+            'published_at': post.published_at,
+            'slug': post.slug,
+            'first_tag_title': post.tags.first().title,
+        }
+
     context = {
-        'most_popular_posts': [
+        'most_popular_posts': [ 
             serialize_post_short_index(post) for post in most_popular_posts
         ],
         'page_posts': [serialize_post(post) for post in most_fresh_posts],
