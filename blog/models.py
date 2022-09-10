@@ -85,8 +85,6 @@ class Tag(models.Model):
             tags_by_post_count = self.with_post_count().order_by('-post_count')
             return tags_by_post_count
 
-
-
     objects = TagQuerySet.as_manager()
 
 
