@@ -46,7 +46,7 @@ class Post(models.Model):
 
         # use this instead of annotate(comment_count=Count('comment')) to optimize multiple annotate calls
         # such as when fetching both the like count and the comment count
-        def fetch_with_comment_count(self):
+        def with_comment_count(self):
             posts = self.all()
             post_ids = [post.id for post in posts]
             posts_with_comments = Post.objects.filter(id__in=post_ids)\

@@ -37,7 +37,7 @@ def index(request):
     most_popular_posts = Post.objects.popular()\
         .prefetch_related('author')[:5]\
         .prefetch_related(Prefetch('tags', queryset=Tag.objects.with_post_count()))\
-        .fetch_with_comment_count()
+        .with_comment_count()
 
     most_fresh_posts = Post.objects.order_by('published_at')\
         .prefetch_related('author')[:5]\
@@ -57,7 +57,7 @@ def index(request):
 
 
 def post_detail(request, slug):
-    post = Post.objects.get(slug=slug)
+    post = Post.objects.select_related('author').get(slug=slug)
     comments = Comment.objects.filter(post=post).prefetch_related('author')
     serialized_comments = []
     for comment in comments:
@@ -99,12 +99,12 @@ def tag_filter(request, tag_title):
     most_popular_posts = Post.objects.popular()\
         .prefetch_related('author')[:5] \
         .prefetch_related(Prefetch('tags', queryset=Tag.objects.with_post_count()))\
-        .fetch_with_comment_count()
+        .with_comment_count()
 
     related_posts = tag.posts.all()[:20]\
         .prefetch_related('author')\
         .prefetch_related(Prefetch('tags', queryset=Tag.objects.with_post_count()))\
-        .fetch_with_comment_count()
+        .with_comment_count()
 
     context = {
         'tag': tag.title,
