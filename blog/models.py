@@ -4,6 +4,25 @@ from django.db.models import Count
 from django.urls import reverse
 
 
+class PostQuerySet(models.QuerySet):
+    def popular(self):
+        posts_by_like_count = self.annotate(like_count=Count('likes'))\
+            .order_by('-like_count')
+        return posts_by_like_count
+
+    # use this instead of annotate(comment_count=Count('comment')) to optimize multiple annotate calls
+    # such as when fetching both the like count and the comment count
+    def with_comment_count(self):
+        post_ids = [post.id for post in self]
+        posts_with_comments = Post.objects.filter(id__in=post_ids)\
+            .annotate(comment_count=Count('comment'))
+        ids_and_comments = posts_with_comments.values_list('id', 'comment_count')
+        count_for_id = dict(ids_and_comments)
+        for post in self:
+            post.comment_count = count_for_id[post.id]
+        return self
+
+
 class Post(models.Model):
     title = models.CharField('Заголовок', max_length=200)
     text = models.TextField('Текст')
@@ -37,27 +56,16 @@ class Post(models.Model):
         verbose_name = 'пост'
         verbose_name_plural = 'посты'
 
-    class PostQuerySet(models.QuerySet):
-
-        def popular(self):
-            posts_by_like_count = self.annotate(like_count=Count('likes'))\
-                .order_by('-like_count')
-            return posts_by_like_count
-
-        # use this instead of annotate(comment_count=Count('comment')) to optimize multiple annotate calls
-        # such as when fetching both the like count and the comment count
-        def with_comment_count(self):
-            posts = self.all()
-            post_ids = [post.id for post in posts]
-            posts_with_comments = Post.objects.filter(id__in=post_ids)\
-                .annotate(comment_count=Count('comment'))
-            ids_and_comments = posts_with_comments.values_list('id', 'comment_count')
-            count_for_id = dict(ids_and_comments)
-            for post in posts:
-                post.comment_count = count_for_id[post.id]
-            return posts
-
     objects = PostQuerySet.as_manager()
+
+
+class TagQuerySet(models.QuerySet):
+    def with_post_count(self):
+        return self.annotate(post_count=Count('posts'))
+
+    def popular(self):
+        tags_by_post_count = self.with_post_count().order_by('-post_count')
+        return tags_by_post_count
 
 
 class Tag(models.Model):
@@ -76,14 +84,6 @@ class Tag(models.Model):
         ordering = ['title']
         verbose_name = 'тег'
         verbose_name_plural = 'теги'
-
-    class TagQuerySet(models.QuerySet):
-        def with_post_count(self):
-            return self.annotate(post_count=Count('posts'))
-
-        def popular(self):
-            tags_by_post_count = self.with_post_count().order_by('-post_count')
-            return tags_by_post_count
 
     objects = TagQuerySet.as_manager()
 
